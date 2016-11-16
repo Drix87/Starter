@@ -85,12 +85,3 @@ gulp.task('js:build', function(){
 	}))
 	.pipe(gulp.dest(path.build.js));
 });
-
-
-
-
-
-
-
-
-
