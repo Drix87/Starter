@@ -33,55 +33,55 @@ var cssnano = require('gulp-cssnano');
 var rename = require("gulp-rename");
 var autoprefixer = require('gulp-autoprefixer');
 
-gulp.task('sass', function(){
-  return gulp.src(path.src.style)
-    .pipe(sass())
-    .pipe(gulp.dest(path.build.css))
-    .pipe(browserSync.reload({
-    	stream: true
-    }))
-});
 
-gulp.task('watch', ['browserSync', 'sass', 'fileinclude'], function(){
-  gulp.watch(path.watch.style, ['sass']);
-  gulp.watch(path.watch.html, ['fileinclude']);
+gulp.task('watch', ['browserSync', 'html:build', 'style:build', 'js:build'], function(){
+  gulp.watch(path.watch.html, ['html:build']);
+  gulp.watch(path.watch.style, ['style:build']);
+  gulp.watch(path.watch.js, ['js:build']);
+
   gulp.watch(path.watch.html, browserSync.reload);
+  gulp.watch('build/css/main.min.css', browserSync.reload);
   gulp.watch(path.watch.js, browserSync.reload); 
-  // Other watchers
 });
 
 gulp.task('browserSync', function() {
   browserSync.init({ 
     server: {
-      baseDir: 'build/'
+      baseDir: path.build.html
     },
   })
 });
 
-gulp.task('fileinclude', function(){
-	gulp.src([path.src.html])
-	.pipe(fileinclude({
-		prefix: '@@',
-		basepath: '@file'
-	}))
-	.pipe(gulp.dest(path.build.html));
+/*=======================================
+=            Задачи для HTML            =
+=======================================*/
+
+gulp.task('html:build', function(){
+	return gulp.src([path.src.html])
+		.pipe(fileinclude({
+			prefix: '@@',
+			basepath: '@file'
+		}))
+		.pipe(gulp.dest(path.build.html));
+/*======================================
+=            Задачи для CSS            =
+======================================*/
+
+gulp.task('style:build', function(cb){
 });
 
+gulp.task('sass', function(){
+  return gulp.src(path.src.style)
+  	.pipe(sourcemaps.init())
+    	.pipe(sass())
 
 gulp.task('cssnano', function() {
     return gulp.src('build/css/main.css')
         .pipe(cssnano())
         .pipe(rename('css/main.min.css'))
-        .pipe(gulp.dest('build/'));
 });
-
 
 
 gulp.task('js:build', function(){
-	gulp.src(path.src.js)
-	.pipe(fileinclude({
-		prefix: '@@',
-		basepath: '@file'
-	}))
-	.pipe(gulp.dest(path.build.js));
-});
+
+
