@@ -30,8 +30,13 @@ var sass = require('gulp-sass');
 var fileinclude = require('gulp-file-include');
 var browserSync = require('browser-sync').create();
 var cssnano = require('gulp-cssnano');
-var rename = require("gulp-rename");
-var autoprefixer = require('gulp-autoprefixer');
+var rename = require("gulp-rename"); 
+var minify = require('gulp-minify'); 
+var imagemin = require('gulp-imagemin'); 
+var runSequence = require('run-sequence'); //Плагин для последовательного запуска тасков (Задачи котороые будет в нем использоваться, обязательно должны начинаться с return gulp...)
+var del = require('del'); // Для таска clean, чтобы очищать перед сборкой папку build
+var autoprefixer = require('gulp-autoprefixer'); //Префиксы CSS свойств
+var sourcemaps = require('gulp-sourcemaps');
 
 
 gulp.task('watch', ['browserSync', 'html:build', 'style:build', 'js:build'], function(){
@@ -63,25 +68,127 @@ gulp.task('html:build', function(){
 			basepath: '@file'
 		}))
 		.pipe(gulp.dest(path.build.html));
+});
+
+
 /*======================================
 =            Задачи для CSS            =
 ======================================*/
 
 gulp.task('style:build', function(cb){
+	runSequence('sass', 'cssnano', cb);
 });
 
 gulp.task('sass', function(){
   return gulp.src(path.src.style)
   	.pipe(sourcemaps.init())
     	.pipe(sass())
+    	.pipe(autoprefixer({
+			browsers: ['last 2 versions'],
+			cascade: false
+		}))
+	.pipe(sourcemaps.write('.'))
+    .pipe(gulp.dest(path.build.css))
+    .pipe(browserSync.reload({
+    	stream: true
+    }))
+});
 
 gulp.task('cssnano', function() {
     return gulp.src('build/css/main.css')
         .pipe(cssnano())
         .pipe(rename('css/main.min.css'))
+        .pipe(gulp.dest('build/'))
+});
+
+/*=============================================
+=            Задачи для JS                    =
+=============================================*/
+
+gulp.task('js:build', function(){
+	return gulp.src(path.src.js)
+		.pipe(fileinclude({
+			prefix: '@@',
+			basepath: '@file'
+		}))
+		.pipe(gulp.dest(path.build.js))
+		.pipe(sourcemaps.init())
+			.pipe(minify())
+		.pipe(sourcemaps.write('.'))
+		.pipe(gulp.dest(path.build.js))
 });
 
 
-gulp.task('js:build', function(){
+/*=========================================
+=            Задачи для Images            =
+=========================================*/
+
+gulp.task('img:build', function(){
+	return gulp.src(path.src.img)
+		.pipe(imagemin({
+			progressive: true, 
+			svgoPlugins: [{removeViewBox: false}], 
+			interlaced: true
+		}))
+		.pipe(gulp.dest(path.build.img))
+		.pipe(browserSync.reload({
+	        	stream: true
+	    }))
+});
 
 
+/*========================================
+=            Задачи для Fonts            =
+========================================*/
+
+gulp.task('fonts:build', function(){
+	return gulp.src(path.src.fonts)
+		.pipe(gulp.dest(path.build.fonts))
+});
+
+
+/*===============================================
+=            Задача для сборки всего            =
+===============================================*/
+
+gulp.task('build', [
+	'html:build', 
+	'style:build',
+	'js:build',
+	'fonts:build', 
+	'img:build'
+]);
+
+gulp.task('build', function(cb){
+	runSequence('clean:build', 
+				'html:build', 
+				['style:build', 
+				'js:build'], 
+				'fonts:build', 
+				'img:build', 
+				cb
+    );
+});
+
+gulp.task('style:build', function(cb){
+	runSequence('sass', 
+				'cssnano', 
+				cb
+	);
+});
+
+
+/*===========================================
+=            Очищаем папку build            =
+===========================================*/
+
+gulp.task('clean:build', function() {
+  return del.sync('build/');
+})
+
+
+/*======================================
+=            GULP - default            =
+======================================*/
+
+gulp.task('default', ['build', 'watch']);
